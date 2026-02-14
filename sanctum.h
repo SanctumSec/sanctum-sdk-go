@@ -147,6 +147,24 @@ SanctumResult sanctum_vault_audit_log(struct SanctumVault *vault,
                                       uintptr_t *out_len);
 
 /**
+ * Delete a credential from the vault.
+ */
+SanctumResult sanctum_vault_delete(struct SanctumVault *vault,
+                                   const char *name,
+                                   const char *agent_id);
+
+/**
+ * List credential names in the vault.
+ *
+ * Returns a JSON array of credential metadata objects. Uses the same
+ * buffer pattern as `sanctum_vault_audit_log`.
+ */
+SanctumResult sanctum_vault_list_credentials(struct SanctumVault *vault,
+                                             const char *agent_id,
+                                             uint8_t *out_json,
+                                             uintptr_t *out_len);
+
+/**
  * Get the error message for the last failed operation on this thread.
  *
  * Returns a pointer to a NUL-terminated string valid until the next FFI call

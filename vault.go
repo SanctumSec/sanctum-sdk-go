@@ -180,3 +180,50 @@ func (v *Vault) AuditLog(agentIDFilter string) (string, error) {
 	}
 	return string(buf[:int(outLen)]), nil
 }
+
+// Delete removes a credential from the vault.
+func (v *Vault) Delete(name string, agentID string) error {
+	if v.ptr == nil {
+		return errors.New("sanctum: vault is closed")
+	}
+
+	cName := C.CString(name)
+	defer C.free(unsafe.Pointer(cName))
+	cAgent := C.CString(agentID)
+	defer C.free(unsafe.Pointer(cAgent))
+
+	rc := C.sanctum_vault_delete(v.ptr, cName, cAgent)
+	return resultToError(rc)
+}
+
+// ListCredentials returns credential paths as a JSON array string.
+func (v *Vault) ListCredentials(agentID string) (string, error) {
+	if v.ptr == nil {
+		return "", errors.New("sanctum: vault is closed")
+	}
+
+	cAgent := C.CString(agentID)
+	defer C.free(unsafe.Pointer(cAgent))
+
+	// First call to get required size.
+	var needed C.uintptr_t
+	rc := C.sanctum_vault_list_credentials(v.ptr, cAgent, nil, &needed)
+	if rc != C.BUFFER_TOO_SMALL && rc != C.OK {
+		return "", resultToError(rc)
+	}
+	if needed == 0 {
+		return "[]", nil
+	}
+
+	buf := make([]byte, int(needed)+1)
+	outLen := C.uintptr_t(len(buf))
+	rc = C.sanctum_vault_list_credentials(
+		v.ptr, cAgent,
+		(*C.uint8_t)(unsafe.Pointer(&buf[0])),
+		&outLen,
+	)
+	if err := resultToError(rc); err != nil {
+		return "", err
+	}
+	return string(buf[:int(outLen)]), nil
+}
