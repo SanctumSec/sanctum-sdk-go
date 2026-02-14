@@ -1,39 +1,41 @@
 package main
 
 import (
-	"context"
 	"fmt"
 	"log"
+	"os"
 
-	sanctum "github.com/jwgale/sanctum-sdk-go"
+	sanctum "github.com/SanctumSec/sanctum-sdk-go"
 )
 
 func main() {
-	ctx := context.Background()
+	vaultPath := os.Args[1]
+	passphrase := []byte(os.Args[2])
 
-	client, err := sanctum.NewClient("/var/run/sanctum.sock")
+	// Initialize a new vault
+	vault, err := sanctum.Init(vaultPath, passphrase)
 	if err != nil {
 		log.Fatal(err)
 	}
-	defer client.Close()
+	defer vault.Close()
 
-	creds, err := client.List(ctx)
+	// Store a credential
+	if err := vault.Store("api-key", []byte("sk-secret-123"), "my-agent", ""); err != nil {
+		log.Fatal(err)
+	}
+	fmt.Println("Stored credential: api-key")
+
+	// Retrieve it
+	secret, err := vault.Retrieve("api-key", "my-agent")
 	if err != nil {
 		log.Fatal(err)
 	}
-	fmt.Println("Available credentials:")
-	for _, c := range creds {
-		fmt.Printf("  - %s\n", c.Path)
-	}
+	fmt.Printf("Retrieved: %s\n", secret)
 
-	cred, err := client.Retrieve(ctx, "database/primary", 300)
+	// Check audit log
+	logJSON, err := vault.AuditLog("")
 	if err != nil {
 		log.Fatal(err)
 	}
-	fmt.Printf("Retrieved: %s (lease: %s)\n", cred.Path, cred.LeaseID)
-
-	if err := client.ReleaseLease(ctx, cred.LeaseID); err != nil {
-		log.Fatal(err)
-	}
-	fmt.Println("Lease released.")
+	fmt.Printf("Audit log: %s\n", logJSON)
 }

@@ -1,3 +1,3 @@
-module github.com/jwgale/sanctum-sdk-go
+module github.com/SanctumSec/sanctum-sdk-go
 
 go 1.25.7
