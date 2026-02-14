@@ -125,6 +125,69 @@ func TestClosedVault(t *testing.T) {
 	}
 }
 
+func TestDelete(t *testing.T) {
+	v := tempVault(t, []byte("pass"))
+
+	if err := v.Store("to-delete", []byte("secret"), "agent-1", ""); err != nil {
+		t.Fatalf("Store: %v", err)
+	}
+
+	// Verify it exists
+	if _, err := v.Retrieve("to-delete", "agent-1"); err != nil {
+		t.Fatalf("Retrieve before delete: %v", err)
+	}
+
+	// Delete it
+	if err := v.Delete("to-delete"); err != nil {
+		t.Fatalf("Delete: %v", err)
+	}
+
+	// Verify it's gone
+	_, err := v.Retrieve("to-delete", "agent-1")
+	if err != ErrNotFound {
+		t.Fatalf("expected ErrNotFound after delete, got: %v", err)
+	}
+}
+
+func TestListCredentials(t *testing.T) {
+	v := tempVault(t, []byte("pass"))
+
+	// Empty vault
+	list, err := v.ListCredentials()
+	if err != nil {
+		t.Fatalf("ListCredentials empty: %v", err)
+	}
+	if list != "[]" && list != "" {
+		// Accept empty array or empty string
+	}
+
+	// Store some credentials
+	if err := v.Store("key-a", []byte("val-a"), "agent-1", ""); err != nil {
+		t.Fatalf("Store key-a: %v", err)
+	}
+	if err := v.Store("key-b", []byte("val-b"), "agent-2", ""); err != nil {
+		t.Fatalf("Store key-b: %v", err)
+	}
+
+	list, err = v.ListCredentials()
+	if err != nil {
+		t.Fatalf("ListCredentials: %v", err)
+	}
+	if !strings.Contains(list, "key-a") || !strings.Contains(list, "key-b") {
+		t.Fatalf("ListCredentials missing keys: %s", list)
+	}
+}
+
+func TestDeleteNotFound(t *testing.T) {
+	v := tempVault(t, []byte("pass"))
+
+	err := v.Delete("nonexistent")
+	// Should either succeed silently or return ErrNotFound
+	if err != nil && err != ErrNotFound {
+		t.Fatalf("unexpected error deleting nonexistent: %v", err)
+	}
+}
+
 func TestMain(m *testing.M) {
 	os.Exit(m.Run())
 }
