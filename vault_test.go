@@ -138,7 +138,7 @@ func TestDelete(t *testing.T) {
 	}
 
 	// Delete it
-	if err := v.Delete("to-delete"); err != nil {
+	if err := v.Delete("to-delete", "agent-1"); err != nil {
 		t.Fatalf("Delete: %v", err)
 	}
 
@@ -153,7 +153,7 @@ func TestListCredentials(t *testing.T) {
 	v := tempVault(t, []byte("pass"))
 
 	// Empty vault
-	list, err := v.ListCredentials()
+	list, err := v.ListCredentials("agent-1")
 	if err != nil {
 		t.Fatalf("ListCredentials empty: %v", err)
 	}
@@ -169,7 +169,7 @@ func TestListCredentials(t *testing.T) {
 		t.Fatalf("Store key-b: %v", err)
 	}
 
-	list, err = v.ListCredentials()
+	list, err = v.ListCredentials("agent-1")
 	if err != nil {
 		t.Fatalf("ListCredentials: %v", err)
 	}
@@ -181,7 +181,7 @@ func TestListCredentials(t *testing.T) {
 func TestDeleteNotFound(t *testing.T) {
 	v := tempVault(t, []byte("pass"))
 
-	err := v.Delete("nonexistent")
+	err := v.Delete("nonexistent", "agent-1")
 	// Should either succeed silently or return ErrNotFound
 	if err != nil && err != ErrNotFound {
 		t.Fatalf("unexpected error deleting nonexistent: %v", err)
