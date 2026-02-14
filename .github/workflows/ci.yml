@@ -28,14 +28,14 @@ jobs:
           path: |
             ~/.cargo/registry
             ~/.cargo/git
-            sanctum/target
-          key: ${{ runner.os }}-cargo-ffi-${{ hashFiles('sanctum/crates/sanctum-ffi/Cargo.toml') }}
+            sanctum-src/target
+          key: ${{ runner.os }}-cargo-ffi-${{ hashFiles('sanctum-src/crates/sanctum-ffi/Cargo.toml') }}
           restore-keys: ${{ runner.os }}-cargo-ffi-
 
       - name: Clone and build sanctum-ffi
         run: |
-          git clone --depth 1 https://github.com/SanctumSec/sanctum.git sanctum
-          cd sanctum
+          git clone --depth 1 https://x-access-token:${{ secrets.SANCTUM_CLONE_TOKEN }}@github.com/SanctumSec/sanctum.git sanctum-src
+          cd sanctum-src
           cargo build --release -p sanctum-ffi
           cp target/release/libsanctum_ffi.so ../lib/
 
