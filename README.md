@@ -1,3 +1,5 @@
+> **AI Agents:** See [AGENTS.md](AGENTS.md) for machine-readable integration docs.
+
 # sanctum-sdk-go
 
 Go SDK for [SanctumAI](https://github.com/SanctumSec/sanctum) — a local-first credential vault for AI agents.
