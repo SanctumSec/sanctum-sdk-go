@@ -165,6 +165,23 @@ SanctumResult sanctum_vault_list_credentials(struct SanctumVault *vault,
                                              uintptr_t *out_len);
 
 /**
+ * Use a credential without revealing it to the caller.
+ *
+ * `operation` is one of: "http_request", "http_header", "sign", "encrypt", "decrypt".
+ * `params_json` is a NUL-terminated JSON object whose keys depend on the operation.
+ *
+ * Returns a JSON object in `out_json`. Uses the same buffer pattern as
+ * `sanctum_vault_audit_log`.
+ */
+SanctumResult sanctum_vault_use_credential(struct SanctumVault *vault,
+                                            const char *name,
+                                            const char *agent_id,
+                                            const char *operation,
+                                            const char *params_json,
+                                            uint8_t *out_json,
+                                            uintptr_t *out_len);
+
+/**
  * Get the error message for the last failed operation on this thread.
  *
  * Returns a pointer to a NUL-terminated string valid until the next FFI call

@@ -9,9 +9,13 @@ package sanctum
 */
 import "C"
 import (
+	"encoding/json"
 	"errors"
 	"unsafe"
 )
+
+// Version is the SDK version. Matches the SanctumAI release tag.
+const Version = "0.4.0"
 
 // Vault wraps an opaque SanctumVault handle from the FFI layer.
 type Vault struct {
@@ -226,4 +230,64 @@ func (v *Vault) ListCredentials(agentID string) (string, error) {
 		return "", err
 	}
 	return string(buf[:int(outLen)]), nil
+}
+
+// UseCredential performs an operation using a credential without exposing the
+// secret to the caller. This is the recommended way for agents to use
+// credentials — the vault acts as a proxy so the agent never sees raw secrets.
+//
+// Supported operations:
+//   - "http_request" — make an HTTP request with the credential injected
+//   - "http_header"  — get an HTTP authorization header value
+//   - "sign"         — sign data (e.g. HMAC)
+//   - "encrypt"      — encrypt data
+//   - "decrypt"      — decrypt data
+//
+// params is a map of operation-specific parameters (serialized to JSON internally).
+// Returns the operation result as a map parsed from the JSON response.
+func (v *Vault) UseCredential(name string, agentID string, operation string, params map[string]interface{}) (map[string]interface{}, error) {
+	if v.ptr == nil {
+		return nil, errors.New("sanctum: vault is closed")
+	}
+
+	paramsJSON, err := json.Marshal(params)
+	if err != nil {
+		return nil, errors.New("sanctum: failed to marshal params: " + err.Error())
+	}
+
+	cName := C.CString(name)
+	defer C.free(unsafe.Pointer(cName))
+	cAgent := C.CString(agentID)
+	defer C.free(unsafe.Pointer(cAgent))
+	cOp := C.CString(operation)
+	defer C.free(unsafe.Pointer(cOp))
+	cParams := C.CString(string(paramsJSON))
+	defer C.free(unsafe.Pointer(cParams))
+
+	// First call to get required size.
+	var needed C.uintptr_t
+	rc := C.sanctum_vault_use_credential(v.ptr, cName, cAgent, cOp, cParams, nil, &needed)
+	if rc != C.BUFFER_TOO_SMALL && rc != C.OK {
+		return nil, resultToError(rc)
+	}
+	if needed == 0 {
+		return map[string]interface{}{}, nil
+	}
+
+	buf := make([]byte, int(needed)+1)
+	outLen := C.uintptr_t(len(buf))
+	rc = C.sanctum_vault_use_credential(
+		v.ptr, cName, cAgent, cOp, cParams,
+		(*C.uint8_t)(unsafe.Pointer(&buf[0])),
+		&outLen,
+	)
+	if err := resultToError(rc); err != nil {
+		return nil, err
+	}
+
+	var result map[string]interface{}
+	if err := json.Unmarshal(buf[:int(outLen)], &result); err != nil {
+		return nil, errors.New("sanctum: failed to parse response: " + err.Error())
+	}
+	return result, nil
 }
